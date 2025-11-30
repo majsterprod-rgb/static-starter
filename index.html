@@ -5,12 +5,114 @@
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>Moja strona</title>
   <link rel="stylesheet" href="style.css">
+  <style>
+    /* szybkie style dla widgetu */
+    #chat-widget-button {
+      position: fixed;
+      bottom: 26px;
+      right: 26px;
+      background: #111;
+      color: white;
+      width: 64px;
+      height: 64px;
+      font-size: 28px;
+      border-radius: 50%;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      cursor: pointer;
+      z-index: 2000;
+    }
+    #chat-widget-window {
+      position: fixed;
+      bottom: 110px;
+      right: 26px;
+      width: 340px;
+      height: 420px;
+      background: #fff;
+      border-radius: 12px;
+      box-shadow: 0 8px 30px rgba(0,0,0,0.25);
+      display: none;
+      flex-direction: column;
+      overflow: hidden;
+      z-index: 3000;
+    }
+    #chat-widget-header { padding:10px; background:#111; color:#fff; display:flex; justify-content:space-between; align-items:center; }
+    #chat-box { padding:12px; flex:1; overflow:auto; background:#f6f6f6; }
+    .bubble { padding:10px 12px; margin:8px 0; border-radius:12px; max-width:78%; }
+    .bubble.user { background:#111; color:#fff; margin-left:auto; }
+    .bubble.ai { background:#e9e9e9; color:#111; margin-right:auto; }
+    #chat-widget-inputs { display:flex; padding:10px; gap:8px; border-top:1px solid #eee; }
+    #chat-widget-inputs input { flex:1; padding:8px 10px; border-radius:8px; border:1px solid #ccc; }
+    #chat-widget-inputs button { padding:8px 12px; border-radius:8px; background:#111; color:#fff; border:none; cursor:pointer; }
+  </style>
 </head>
 <body>
   <main style="padding:28px; font-family:Arial, sans-serif;">
     <h1>Działa!</h1>
-    <p>To jest twoja statyczna strona — krok 1 wykonany.</p>
+    <p>To jest twoja statyczna strona — krok 3 (widget) w przygotowaniu.</p>
   </main>
+
+  <!-- widget -->
+  <div id="chat-widget-button">💬</div>
+
+  <div id="chat-widget-window">
+    <div id="chat-widget-header">
+      AI Assistant
+      <span id="chat-widget-close" style="cursor:pointer">✖</span>
+    </div>
+    <div id="chat-box"></div>
+    <div id="chat-widget-inputs">
+      <input id="userInput" type="text" placeholder="Napisz wiadomość..." />
+      <button id="sendBtn">Wyślij</button>
+    </div>
+  </div>
+
+  <script>
+    function addBubble(sender, text) {
+      const box = document.getElementById("chat-box");
+      const div = document.createElement("div");
+      div.className = 'bubble ' + (sender === "You" ? 'user' : 'ai');
+      div.textContent = text;
+      box.appendChild(div);
+      box.scrollTop = box.scrollHeight;
+    }
+
+    document.getElementById("chat-widget-button").onclick = () => {
+      document.getElementById("chat-widget-window").style.display = "flex";
+    };
+    document.getElementById("chat-widget-close").onclick = () => {
+      document.getElementById("chat-widget-window").style.display = "none";
+    };
+
+    async function sendMessage() {
+      const input = document.getElementById("userInput");
+      const msg = input.value.trim();
+      if (!msg) return;
+      addBubble("You", msg);
+      input.value = "";
+      addBubble("AI", "Ładuję odpowiedź...");
+
+      try {
+        const resp = await fetch("/api/chat", {
+          method: "POST",
+          headers: {"Content-Type":"application/json"},
+          body: JSON.stringify({ message: msg })
+        });
+        const data = await resp.json();
+        // usuń ostatnią "Ładuję odpowiedź..." i dodaj prawdziwy tekst
+        const aiBubbles = document.querySelectorAll('.bubble.ai');
+        if (aiBubbles.length) aiBubbles[aiBubbles.length-1].textContent = data.reply || "Brak odpowiedzi";
+      } catch (e) {
+        const aiBubbles = document.querySelectorAll('.bubble.ai');
+        if (aiBubbles.length) aiBubbles[aiBubbles.length-1].textContent = "Błąd serwera";
+      }
+    }
+
+    document.getElementById("sendBtn").onclick = sendMessage;
+    document.getElementById("userInput").addEventListener("keydown", (e) => {
+      if (e.key === "Enter") sendMessage();
+    });
+  </script>
 </body>
 </html>
-
